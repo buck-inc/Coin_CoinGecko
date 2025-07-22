@@ -48,4 +48,3 @@ st.dataframe(df.tail())
 last_price = df[["price"]].tail(1)
 prediksi = model.predict(last_price)
 st.success(f"🎯 Prediksi Harga Selanjutnya: ${prediksi[0]:,.2f}")
-
