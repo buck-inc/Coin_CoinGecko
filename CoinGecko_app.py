@@ -13,7 +13,7 @@ def get_data():
     url = "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart"
     params = {
         "vs_currency": "usd",
-        "days": "1",
+        "days": "3",#ganti ke3-7 agar lebih panjang
         "interval": "hourly"
     }
     try:
@@ -27,14 +27,15 @@ def get_data():
         df["high"] = df[["open", "close"]].max(axis=1)
         df["low"] = df[["open", "close"]].min(axis=1)
         df = df.dropna().reset_index(drop=True)
-        df["target"] = df["close"].shift(-1)
+        df["target"] = df["price"].shift(-1)
         return df.dropna()
-    except:
-        return None
+    except Exception as e:
+        st.error("Gagal mengambil data dari CoinGecko")
+        return pd.DataFrame()
 
-df = get_data()
+df = get_data_coingecko()
 
-if df is None or len(df) < 10:
+if df .empty or len(df)< 10:
     st.error("Gagal mengambil data dari CoinGecko atau data terlalu sedikit.")
     st.stop()
 
