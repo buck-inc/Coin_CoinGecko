@@ -3,17 +3,16 @@ import pandas as pd
 import requests
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
-import plotly.graph_objects as go
 
 st.set_page_config(page_title="Prediksi Harga Crypto dari CoinGecko", layout="wide")
 st.title("📉 Prediksi Harga Crypto dari CoinGecko")
 
 @st.cache_data
-def get_data():
+def get_data_coingecko():
     url = "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart"
     params = {
         "vs_currency": "usd",
-        "days": "3",#ganti ke3-7 agar lebih panjang
+        "days": "3",
         "interval": "hourly"
     }
     try:
@@ -22,56 +21,31 @@ def get_data():
         prices = data["prices"]
         df = pd.DataFrame(prices, columns=["timestamp", "price"])
         df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
-        df["open"] = df["price"].shift(1)
-        df["close"] = df["price"]
-        df["high"] = df[["open", "close"]].max(axis=1)
-        df["low"] = df[["open", "close"]].min(axis=1)
-        df = df.dropna().reset_index(drop=True)
         df["target"] = df["price"].shift(-1)
         return df.dropna()
-    except Exception as e:
-        st.error("Gagal mengambil data dari CoinGecko")
+    except Exception:
+        st.error("Gagal mengambil data dari CoinGecko.")
         return pd.DataFrame()
 
 df = get_data_coingecko()
 
-if df .empty or len(df)< 10:
+if df.empty or len(df) < 10:
     st.error("Gagal mengambil data dari CoinGecko atau data terlalu sedikit.")
     st.stop()
 
-X = df[["open", "high", "low"]]
+X = df[["price"]]
 y = df["target"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-if len(X) > 5:
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-    model = LinearRegression()
-    model.fit(X_train, y_train)
-    acc = model.score(X_test, y_test)
-    st.success(f"Model Akurasi: {acc:.2f}")
-else:
-    st.warning("Data terlalu sedikit untuk pelatihan model.")
-    st.stop()
+model = LinearRegression()
+model.fit(X_train, y_train)
+accuracy = model.score(X_test, y_test)
 
-# Prediksi harga
-last_data = X.tail(1)
-prediction = model.predict(last_data)
-st.success(f"🎯 Prediksi Harga Selanjutnya: ${prediction[0]:,.2f}")
-
-# Tampilan DataFrame
+st.success(f"Model Akurasi: {accuracy:.2f}")
 st.subheader("📊 Data Terbaru")
-st.dataframe(df.tail(), use_container_width=True)
+st.dataframe(df.tail())
 
-# Grafik Candlestick
-fig = go.Figure(data=[
-    go.Candlestick(
-        x=df['timestamp'],
-        open=df['open'],
-        high=df['high'],
-        low=df['low'],
-        close=df['close'],
-        name='BTC/USD'
-    )
-])
-fig.update_layout(title="Grafik Harga Bitcoin (Candlestick)", xaxis_title="Waktu", yaxis_title="Harga USD")
-st.plotly_chart(fig, use_container_width=True)
+last_price = df[["price"]].tail(1)
+prediksi = model.predict(last_price)
+st.success(f"🎯 Prediksi Harga Selanjutnya: ${prediksi[0]:,.2f}")
 
